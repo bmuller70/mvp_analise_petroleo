@@ -3,7 +3,6 @@ import gdown
 import pickle
 import pandas as pd
 from prophet import Prophet
-import plotly.express as px
 
 
 

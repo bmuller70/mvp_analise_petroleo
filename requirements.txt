@@ -1,6 +1,5 @@
 streamlit 
 gdown
-pickle
 pandas
 prophet
 plotly
