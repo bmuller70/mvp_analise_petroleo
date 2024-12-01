@@ -2,6 +2,8 @@ import streamlit as st
 import gdown
 import pickle
 import pandas as pd
+from prophet import Prophet
+
 
 # Função para carregar o modelo Prophet
 @st.cache_resource

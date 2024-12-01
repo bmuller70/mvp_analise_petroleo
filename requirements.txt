@@ -2,3 +2,4 @@ streamlit
 gdown
 pickle
 pandas
+prophet
