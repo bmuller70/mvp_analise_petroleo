@@ -7,6 +7,7 @@ import pandas as pd
 @st.cache_resource
 def carregar_modelo():
     # URL do modelo Prophet salvo no Google Drive
+    #https://drive.google.com/file/d/11eL3dI9aeUGjVKUSDGrDccLJ4tPQMHTD/view?usp=sharing
     url = 'https://drive.google.com/uc?id=11eL3dI9aeUGjVKUSDGrDccLJ4tPQMHTD'
     
     # Fazer o download do modelo
