@@ -1,5 +1,7 @@
-streamlit 
-gdown
+streamlit
 pandas
-prophet
+matplotlib
 plotly
+prophet
+openpyxl
+pickle
