@@ -3,30 +3,29 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 
-# Função para carregar e exibir os dados
+# Função para carregar os dados e ajustar o modelo ARIMA
+def forecast_model(data, steps=1):
+    modelo = ARIMA(data['Preço'], order=(2, 1, 2))
+    modelo_fit = modelo.fit()
+    forecast = modelo_fit.forecast(steps=steps)
+    forecast_index = pd.date_range(start=data.index[-1] + pd.Timedelta(days=1), periods=steps, freq="D")
+    forecast_series = pd.Series(forecast, index=forecast_index)
+    return forecast_series
+
+# Função para carregar e exibir dados
 @st.cache
 def carregar_dados():
     try:
-        # Carregar os dados do arquivo Excel
         ipeadata = pd.read_excel('ipeadata.xlsx', engine='openpyxl')
         ipeadata['Data'] = pd.to_datetime(ipeadata['Data'], errors='coerce')
         ipeadata.set_index('Data', inplace=True)
-        ipeadata = ipeadata[ipeadata.index >= pd.Timestamp.today() - pd.Timedelta(days=365)]  # Dados recentes
-        ipeadata['Preço'] = pd.to_numeric(ipeadata['Preço'], errors='coerce')
+        ipeadata = ipeadata[ipeadata.index >= pd.Timestamp.today() - pd.Timedelta(days=365)]  # Ajuste para dados recentes
+        ipeadata['Preço'] = pd.to_numeric(ipeadata['Preço'], errors='coerce')  # Garantir que a coluna de preço seja numérica
         ipeadata = ipeadata.dropna()  # Remover valores nulos
         return ipeadata
     except FileNotFoundError:
         st.error("Arquivo `ipeadata.xlsx` não encontrado. Verifique se ele está no diretório correto.")
         return None
-
-# Função para calcular a previsão
-def forecast_model(data, steps=1):
-    modelo = ARIMA(data['Preço'], order=(2, 1, 2))
-    modelo_fit = modelo.fit()
-    forecast = modelo_fit.forecast(steps=steps)
-    forecast_index = pd.date_range(start=data.index[-1] + pd.Timedelta(days=1), periods=steps, freq='D')
-    forecast_series = pd.Series(forecast, index=forecast_index)
-    return forecast_series
 
 # Carregar os dados
 dados = carregar_dados()
@@ -48,7 +47,7 @@ if dados is not None:
     ax.legend()
     st.pyplot(fig)
 
-    # Previsão para amanhã
+    # Exibir a previsão para amanhã
     previsao_hoje = forecast_model(dados, steps=1)
     previsao_amanha = previsao_hoje.iloc[0]
     st.markdown("### Previsão para Amanhã")
