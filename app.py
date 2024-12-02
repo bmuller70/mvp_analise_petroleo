@@ -1,64 +1,85 @@
 import streamlit as st
-import gdown
-import pickle
 import pandas as pd
+import pickle
 from prophet import Prophet
+import matplotlib.pyplot as plt
 
+# Configuração inicial do Streamlit
+st.set_page_config(page_title='Dashboard de Previsão do Petróleo', layout='wide')
 
+# Funções auxiliares
+@st.cache_resource
+def carregar_dados():
+    """Carregar os dados de petróleo do arquivo ipeadata.xlsx."""
+    try:
+        arquivo = "ipeadata.xlsx"  # Ajuste o caminho se necessário
+        dados = pd.read_excel(arquivo, engine="openpyxl")
+        dados['data'] = pd.to_datetime(dados['data'])
+        dados = dados.rename(columns={"data": "ds", "preco": "y"})  # Adequação para Prophet
+        return dados
+    except FileNotFoundError:
+        st.error("Arquivo `ipeadata.xlsx` não encontrado. Certifique-se de que o arquivo está no diretório correto.")
+        return None
 
-# Função para carregar o modelo Prophet
 @st.cache_resource
 def carregar_modelo():
-    # URL do modelo Prophet salvo no Google Drive
-    #https://drive.google.com/file/d/11eL3dI9aeUGjVKUSDGrDccLJ4tPQMHTD/view?usp=sharing
-    url = 'https://drive.google.com/uc?id=11eL3dI9aeUGjVKUSDGrDccLJ4tPQMHTD'
-    
-    # Fazer o download do modelo
-    gdown.download(url, 'prophet_model.pkl', quiet=False)
-    
-    # Carregar o modelo Prophet com pickle
-    with open('prophet_model.pkl', 'rb') as f:
-        modelo = pickle.load(f)
-    
-    return modelo
+    """Carregar o modelo Prophet treinado."""
+    try:
+        arquivo_modelo = "modelo_prophet.pkl"
+        with open(arquivo_modelo, "rb") as f:
+            modelo = pickle.load(f)
+        return modelo
+    except FileNotFoundError:
+        st.error("Arquivo `modelo_prophet.pkl` não encontrado. Certifique-se de que o modelo está no diretório correto.")
+        return None
 
-# Função principal do aplicativo
-def main():
-    # Configuração da página
-    st.set_page_config(page_title='MVP para análise temporal de petróleo',
-                       page_icon='🛢️')
-    
-    st.write('# MVP para análise de preço do petróleo Brent')
+# Carregando dados e modelo
+dados = carregar_dados()
+modelo = carregar_modelo()
 
-    # Carregar o modelo Prophet
-    modelo = carregar_modelo()
-    st.success("Modelo carregado com sucesso!")
+if dados is not None and modelo is not None:
+    # Visualização dos dados
+    st.title("Dashboard de Previsão do Preço do Petróleo")
+    st.write("### Dados históricos do preço do petróleo")
+    st.dataframe(dados.tail(30))  # Mostrar os últimos 30 dias
 
-    # Entradas do usuário para previsão
-    st.sidebar.header("Configurações da Previsão")
-    periods = st.sidebar.number_input("Quantos dias você quer prever?", min_value=1, value=30)
+    # Gráfico dos dados históricos
+    st.write("### Gráfico de Preços Históricos")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(dados['ds'], dados['y'], label="Preço Histórico", color='blue')
+    ax.set_title("Histórico de Preços do Petróleo")
+    ax.set_xlabel("Data")
+    ax.set_ylabel("Preço (USD)")
+    ax.legend()
+    st.pyplot(fig)
 
-    # Botão para gerar previsão
+    # Previsão com Prophet
+    st.write("### Previsão com Modelo Prophet")
+    periodos = st.slider("Escolha o número de dias para previsão:", min_value=1, max_value=60, value=30)
     if st.button("Gerar Previsão"):
-        # Criar DataFrame futuro
-        future = modelo.make_future_dataframe(periods=periods)
+        futuro = modelo.make_future_dataframe(periods=periodos)
+        previsao = modelo.predict(futuro)
 
-        # Fazer a previsão
-        forecast = modelo.predict(future)
+        # Exibir a previsão
+        st.write("#### Resultados da Previsão")
+        st.dataframe(previsao[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(periodos))
 
-        # Mostrar resultados
-        st.subheader("Resultados da Previsão")
-        st.write(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']])
+        # Gráfico da previsão
+        st.write("### Gráfico da Previsão")
+        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        ax2.plot(previsao['ds'], previsao['yhat'], label="Previsão", color='green')
+        ax2.fill_between(previsao['ds'], previsao['yhat_lower'], previsao['yhat_upper'], color='gray', alpha=0.3, label="Intervalo de Confiança")
+        ax2.set_title("Previsão do Preço do Petróleo")
+        ax2.set_xlabel("Data")
+        ax2.set_ylabel("Preço (USD)")
+        ax2.legend()
+        st.pyplot(fig2)
 
-        # Plotar o gráfico
-        st.subheader("Gráfico da Previsão")
-        st.line_chart(forecast[['ds', 'yhat']].set_index('ds'))
-
-    # Seções adicionais como placeholders
-    st.write("## Dashboard")
-    st.write("## Insights")
-    st.write("## Modelo")
-
-# Rodar o aplicativo
-if __name__ == "__main__":
-    main()
+    # Orientações para Deploy
+    st.write("### Orientações para Deploy")
+    st.markdown("""
+    - Utilize plataformas como Streamlit Cloud, AWS ou Google Cloud para hospedar o aplicativo.
+    - Certifique-se de carregar os arquivos necessários (dados e modelo) no ambiente de produção.
+    """)
+else:
+    st.error("Não foi possível carregar os dados ou o modelo. Verifique os arquivos e tente novamente.")
