@@ -12,8 +12,7 @@ st.set_page_config(page_title='Dashboard de Previsão do Petróleo', layout='wid
 def carregar_dados():
     """Carregar os dados de petróleo do arquivo ipeadata.xlsx."""
     try:
-        arquivo = "ipeadata.xlsx"  # Ajuste o caminho se necessário
-        dados = pd.read_excel(arquivo, engine="openpyxl")
+        dados = pd.read_excel('ipeadata.xlsx', engine='openpyxl')  # Ajuste o caminho se necessário
         dados['data'] = pd.to_datetime(dados['data'])
         dados = dados.rename(columns={"data": "ds", "preco": "y"})  # Adequação para Prophet
         return dados
