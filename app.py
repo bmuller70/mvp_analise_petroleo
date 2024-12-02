@@ -1,84 +1,44 @@
-import streamlit as st
 import pandas as pd
-import pickle
-from prophet import Prophet
+import streamlit as st
 import matplotlib.pyplot as plt
 
-# Configuração inicial do Streamlit
-st.set_page_config(page_title='Dashboard de Previsão do Petróleo', layout='wide')
-
-# Funções auxiliares
-@st.cache_resource
+# Função para carregar os dados
+@st.cache
 def carregar_dados():
-    """Carregar os dados de petróleo do arquivo ipeadata.xlsx."""
-    try:
-        dados = pd.read_excel('ipeadata.xlsx', engine='openpyxl')  # Ajuste o caminho se necessário
-        dados['data'] = pd.to_datetime(dados['data'])
-        dados = dados.rename(columns={"data": "ds", "preco": "y"})  # Adequação para Prophet
-        return dados
-    except FileNotFoundError:
-        st.error("Arquivo `ipeadata.xlsx` não encontrado. Certifique-se de que o arquivo está no diretório correto.")
-        return None
+    # Carregue os dados do arquivo (substitua pelo caminho real)
+    dados = pd.read_csv('/mnt/data/seus_dados.csv', parse_dates=['data'])
+    return dados
 
-@st.cache_resource
-def carregar_modelo():
-    """Carregar o modelo Prophet treinado."""
-    try:
-        arquivo_modelo = "modelo_prophet.pkl"
-        with open(arquivo_modelo, "rb") as f:
-            modelo = pickle.load(f)
-        return modelo
-    except FileNotFoundError:
-        st.error("Arquivo `modelo_prophet.pkl` não encontrado. Certifique-se de que o modelo está no diretório correto.")
-        return None
+# Função de previsão
+def forecast_model(dados):
+    # Adicione a lógica para o seu modelo de previsão de acordo com sua implementação
+    forecast = dados.copy()
+    forecast['previsao'] = forecast['preco'].shift(-1)  # Exemplo simples para demonstração
+    return forecast
 
-# Carregando dados e modelo
+# Carregar os dados
 dados = carregar_dados()
-modelo = carregar_modelo()
 
-if dados is not None and modelo is not None:
-    # Visualização dos dados
-    st.title("Dashboard de Previsão do Preço do Petróleo")
-    st.write("### Dados históricos do preço do petróleo")
-    st.dataframe(dados.tail(30))  # Mostrar os últimos 30 dias
+# Filtrar os últimos 30 dias
+dados_ultimos_30 = dados[dados['data'] >= (dados['data'].max() - pd.Timedelta(days=30))]
 
-    # Gráfico dos dados históricos
-    st.write("### Gráfico de Preços Históricos")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(dados['ds'], dados['y'], label="Preço Histórico", color='blue')
-    ax.set_title("Histórico de Preços do Petróleo")
-    ax.set_xlabel("Data")
-    ax.set_ylabel("Preço (USD)")
-    ax.legend()
-    st.pyplot(fig)
+# Exibir os dados no Streamlit
+st.title("Dashboard de Análise de Preço do Petróleo")
+st.write("Últimos 30 Dias de Dados Históricos")
+st.dataframe(dados_ultimos_30)
 
-    # Previsão com Prophet
-    st.write("### Previsão com Modelo Prophet")
-    periodos = st.slider("Escolha o número de dias para previsão:", min_value=1, max_value=60, value=30)
-    if st.button("Gerar Previsão"):
-        futuro = modelo.make_future_dataframe(periods=periodos)
-        previsao = modelo.predict(futuro)
+# Criar o gráfico dos últimos 30 dias
+st.subheader("Gráfico dos Últimos 30 Dias")
+plt.figure(figsize=(12, 6))
+plt.plot(dados_ultimos_30['data'], dados_ultimos_30['preco'], label='Preço Histórico', color='blue')
+plt.title('Preço do Petróleo - Últimos 30 Dias')
+plt.xlabel('Data')
+plt.ylabel('Preço do Petróleo (USD)')
+plt.grid(True)
+plt.legend()
+st.pyplot(plt)
 
-        # Exibir a previsão
-        st.write("#### Resultados da Previsão")
-        st.dataframe(previsao[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(periodos))
-
-        # Gráfico da previsão
-        st.write("### Gráfico da Previsão")
-        fig2, ax2 = plt.subplots(figsize=(10, 5))
-        ax2.plot(previsao['ds'], previsao['yhat'], label="Previsão", color='green')
-        ax2.fill_between(previsao['ds'], previsao['yhat_lower'], previsao['yhat_upper'], color='gray', alpha=0.3, label="Intervalo de Confiança")
-        ax2.set_title("Previsão do Preço do Petróleo")
-        ax2.set_xlabel("Data")
-        ax2.set_ylabel("Preço (USD)")
-        ax2.legend()
-        st.pyplot(fig2)
-
-    # Orientações para Deploy
-    st.write("### Orientações para Deploy")
-    st.markdown("""
-    - Utilize plataformas como Streamlit Cloud, AWS ou Google Cloud para hospedar o aplicativo.
-    - Certifique-se de carregar os arquivos necessários (dados e modelo) no ambiente de produção.
-    """)
-else:
-    st.error("Não foi possível carregar os dados ou o modelo. Verifique os arquivos e tente novamente.")
+# Executar a previsão e mostrar os resultados
+previsao_hoje = forecast_model(dados_ultimos_30)
+st.subheader("Previsão para Hoje")
+st.write(previsao_hoje.iloc[-1])  # Exibe a última linha da previsão
